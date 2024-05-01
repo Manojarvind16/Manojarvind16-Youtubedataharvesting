@@ -8,7 +8,6 @@ from psycopg2 import sql
 import pandas as pd
 import time
 import re
-from datetime import datetime,timedelta
 import isodate
 import streamlit as st
 
@@ -16,7 +15,7 @@ import streamlit as st
 # Connection parameters
 mydb_host = "localhost"
 mydb_user = "postgres"
-mydb_password = "###############"
+mydb_password = "##############"
 mydb_port = "5432"
 mydb_name = "my_youtube"#database connection
 
@@ -40,7 +39,7 @@ except:
 mydb = psycopg2.connect(
                         host="localhost",
                         user="postgres",
-                        password="###############",
+                        password="##############",
                         port="5432",
                         database="my_youtube"
                     )
@@ -137,11 +136,9 @@ def get_videos_ids(channel_id):
     video_ids = []
     try:
         response = youtube.channels().list(
-            id=channel_id,
-            part='contentDetails').execute()
-
+        id=channel_id,
+        part='contentDetails').execute()
         Playlist_Id = response['items'][0]['contentDetails']['relatedPlaylists']['uploads']
-
         next_page_token = None
 
         while True:
@@ -277,31 +274,20 @@ def fetch_data(channel_id):
     comment_df['Published_Date'] = pd.to_datetime(comment_df['Published_Date'])  
 
     return channel_df, video_df, comment_df
-    
-    try:
-        # Store dataframes in the PostgreSQL database
-        channel_df.to_sql('channels', engine, if_exists='append', index=False)
-        video_df.to_sql('videos', engine, if_exists='append', index=False)
-        comment_df.to_sql('comments', engine, if_exists='append', index=False)
-
-        st.success("Data pushed successfully to PostgreSQL.")
-
-    except Exception as e:
-        st.error("An error occurred while pushing data to PostgreSQL:", str(e))
 
 # Function to execute SQL queries and fetch results
 def execute_query(query):
     # Connection parameters
     mydb_host = "localhost"
     mydb_user = "postgres"
-    mydb_password = "###############"
+    mydb_password = "##############"
     mydb_port = "5432"
     mydb_name = "my_youtube"
 
     # Construct the connection string
     connection_string = f"postgresql://{mydb_user}:{mydb_password}@{mydb_host}:{mydb_port}/{mydb_name}"
 
-    # Create the SQLAlchemy engine
+    # Create the SQLAlchemy engine 
     engine = create_engine(connection_string)
 
     # Create a text object from the query string
@@ -315,6 +301,29 @@ def execute_query(query):
     
     return pd.DataFrame(data, columns=columns)
 
+# Function to push data to database
+def push_to_database(channel_df, video_df, comment_df):
+    try:
+        # Connect to PostgreSQL database
+        mydb_host = "localhost"
+        mydb_user = "postgres"
+        mydb_password = "##############"
+        mydb_port = "5432"
+        mydb_name = "my_youtube"
+
+        connection_string = f"postgresql://{mydb_user}:{mydb_password}@{mydb_host}:{mydb_port}/{mydb_name}"
+        engine = create_engine(connection_string)
+
+        # Store dataframes in the PostgreSQL database
+        channel_df.to_sql('channels', engine, if_exists='append', index=False)
+        video_df.to_sql('videos', engine, if_exists='append', index=False)
+        comment_df.to_sql('comments', engine, if_exists='append', index=False)
+
+        st.success("Data pushed successfully to PostgreSQL.")
+
+    except Exception as e:
+        st.error("An error occurred while pushing data to PostgreSQL: " + str(e))
+
 # Main function to run Streamlit app
 def main():
     with st.sidebar:
@@ -324,26 +333,41 @@ def main():
         st.caption("Data Collection")
         st.caption("API Integration")
 
+        
+    st.write("Enter the YouTube channel ID:")
     # Input bar for channel ID
-    channel_id = st.text_input("Enter Channel ID:")
+    channel_id = st.text_input("")
 
     if st.button("Fetch Data"):
-        # Fetch data from YouTube API
-        channel_df, video_df, comment_df = fetch_data(channel_id)
+        try:
+            # Fetch data from YouTube API
+            channel_df, video_df, comment_df = fetch_data(channel_id)
 
-        # Display dataframes
-        st.subheader("Channel Data")
-        st.write(channel_df)
+            # Display dataframes
+            st.subheader("Channel Data")
+            st.write(channel_df)
 
-        st.subheader("Video Data")
-        st.write(video_df)
+            st.subheader("Video Data")
+            st.write(video_df)
 
-        st.subheader("Comment Data")
-        st.write(comment_df)
+            st.subheader("Comment Data")
+            st.write(comment_df)
+
+        except Exception as e:
+            st.error("An error occurred while fetching data: " + str(e))
 
     if st.button("Push to Database"):
-        # Store data in PostgreSQL database
-        store_data_to_postgres(channel_df, video_df, comment_df)
+        try:
+            # Fetch data from YouTube API
+            channel_df, video_df, comment_df = fetch_data(channel_id)
+
+            # Store data in the PostgreSQL database
+            push_to_database(channel_df, video_df, comment_df)
+
+        except Exception as e:
+            st.error("An error occurred while pushing data to PostgreSQL: " + str(e))
+
+
 
     selected_query = st.selectbox("Select a question", [
                                                     "1. What are the names of all the videos and their corresponding channels?",
@@ -351,7 +375,7 @@ def main():
                                                     "3. What are the top 10 most viewed videos and their respective channels?",
                                                     "4. How many comments were made on each video, and what are their corresponding video names?",
                                                     "5. Which videos have the highest number of likes, and what are their corresponding channel names?",
-                                                    "6. What is the total number of likes and dislikes for each video, and what are their corresponding video names?",
+                                                    "6. What is the total number of likes for each video, and what are their corresponding video names?",
                                                     "7. What is the total number of views for each channel, and what are their corresponding channel names?",
                                                     "8. What are the names of all the channels that have published videos in the year 2022?",
                                                     "9. What is the average duration of all videos in each channel, and what are their corresponding channel names?",
@@ -376,7 +400,7 @@ def main():
             st.write(result_df)
 
         elif query_number == 4:
-            query = 'SELECT "Video_id", COUNT(*) as "Comment_Count" FROM comments GROUP BY "Video_id";'
+            query = 'SELECT videos."Video_Title", videos."Video_Id", COUNT(comments."Comment_Id") AS "Comment_Count" FROM videos JOIN comments ON videos."Video_Id" = comments."Video_id" GROUP BY videos."Video_Title", videos."Video_Id";'
             result_df = execute_query(query)
             st.write(result_df)
 
@@ -406,7 +430,7 @@ def main():
             st.write(result_df)
 
         elif query_number == 10:
-            query = 'SELECT "Video_id", COUNT(*) as "Comment_Count" FROM comments GROUP BY "Video_id" ORDER BY "Comment_Count" DESC LIMIT 1;'
+            query = 'SELECT videos."Video_Title", videos."Channel_Name", COUNT(comments."Comment_Id") AS "Comment_Count" FROM videos JOIN comments ON videos."Video_Id" = comments."Video_id" GROUP BY videos."Video_Title", videos."Channel_Name" ORDER BY "Comment_Count" DESC;'
             result_df = execute_query(query)
             st.write(result_df)
 
