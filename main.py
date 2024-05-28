@@ -12,10 +12,11 @@ import isodate
 import streamlit as st
 
 
-# Connection parameters
+# Connection parameters+
+
 mydb_host = "localhost"
 mydb_user = "postgres"
-mydb_password = "##############"
+mydb_password = "Kiprthmass2170."
 mydb_port = "5432"
 mydb_name = "my_youtube"#database connection
 
@@ -39,7 +40,7 @@ except:
 mydb = psycopg2.connect(
                         host="localhost",
                         user="postgres",
-                        password="##############",
+                        password="Kiprthmass2170.",
                         port="5432",
                         database="my_youtube"
                     )
@@ -87,7 +88,7 @@ except Exception as e:
 
 try:
     create_query='''create table if not exists comments(Comment_Id varchar(100) primary key,
-                                                        Video_id varchar(50),
+                                                        Video_Id varchar(50),
                                                         Comment_TEXT text,
                                                         Comment_Author varchar(150),
                                                         Published_Date Timestamp)'''
@@ -209,7 +210,7 @@ def get_comment_info(video_ids):
             if 'items' in response:
                 for item in response['items']:
                     data=dict(Comment_Id=item['snippet']['topLevelComment']['id'],
-                            Video_id=item['snippet']['topLevelComment']['snippet']['videoId'],
+                            Video_Id=item['snippet']['topLevelComment']['snippet']['videoId'],
                             Comment_TEXT=item['snippet']['topLevelComment']['snippet']['textDisplay'],
                             Comment_Author=item['snippet']['topLevelComment']['snippet']['authorDisplayName'],
                             Published_Date=item['snippet']['topLevelComment']['snippet']['publishedAt'])
@@ -280,7 +281,7 @@ def execute_query(query):
     # Connection parameters
     mydb_host = "localhost"
     mydb_user = "postgres"
-    mydb_password = "##############"
+    mydb_password = "Kiprthmass2170."
     mydb_port = "5432"
     mydb_name = "my_youtube"
 
@@ -307,7 +308,7 @@ def push_to_database(channel_df, video_df, comment_df):
         # Connect to PostgreSQL database
         mydb_host = "localhost"
         mydb_user = "postgres"
-        mydb_password = "##############"
+        mydb_password = "Kiprthmass2170."
         mydb_port = "5432"
         mydb_name = "my_youtube"
 
@@ -400,9 +401,10 @@ def main():
             st.write(result_df)
 
         elif query_number == 4:
-            query = 'SELECT videos."Video_Title", videos."Video_Id", COUNT(comments."Comment_Id") AS "Comment_Count" FROM videos JOIN comments ON videos."Video_Id" = comments."Video_id" GROUP BY videos."Video_Title", videos."Video_Id";'
+            query = 'SELECT videos."Video_Title", videos."Video_Id", COUNT(comments."Comment_Id") AS "Comment_Count" FROM videos JOIN comments ON videos."Video_Id" = comments."Video_Id" GROUP BY videos."Video_Title", videos."Video_Id";'
             result_df = execute_query(query)
             st.write(result_df)
+
 
         elif query_number == 5:
             query = 'SELECT "Video_Title", "Channel_Name", "Likes" FROM videos ORDER BY "Likes" DESC;'
@@ -410,9 +412,10 @@ def main():
             st.write(result_df)
 
         elif query_number == 6:
-            query = 'SELECT "Video_Id", SUM("Likes") as "Total_Likes" FROM videos GROUP BY "Video_Id";'
+            query = 'SELECT "Video_Title", SUM("Likes") as "Total_Likes" FROM videos GROUP BY "Video_Title";'
             result_df = execute_query(query)
             st.write(result_df)
+
 
         elif query_number == 7:
             query = 'SELECT "Channel_Name", SUM("Views") as "Total_Views" FROM videos GROUP BY "Channel_Name";'
@@ -425,12 +428,14 @@ def main():
             st.write(result_df)
 
         elif query_number == 9:
-            query = 'SELECT "Channel_Id", AVG(EXTRACT(EPOCH FROM "Duration_HMS"::interval)) AS "Average_Duration" FROM videos GROUP BY "Channel_Id";'
+            query = 'SELECT "Channel_Name", AVG(EXTRACT(EPOCH FROM "Duration_HMS"::interval)) AS "Average_Duration" FROM videos GROUP BY "Channel_Name";'
             result_df = execute_query(query)
             st.write(result_df)
 
+
         elif query_number == 10:
-            query = 'SELECT videos."Video_Title", videos."Channel_Name", COUNT(comments."Comment_Id") AS "Comment_Count" FROM videos JOIN comments ON videos."Video_Id" = comments."Video_id" GROUP BY videos."Video_Title", videos."Channel_Name" ORDER BY "Comment_Count" DESC;'
+            query = 'SELECT videos."Video_Title", videos."Channel_Name", COUNT(comments."Comment_Id") AS "Comment_Count" FROM videos JOIN comments ON videos."Video_Id" = comments."Video_Id" GROUP BY videos."Video_Title", videos."Channel_Name" HAVING COUNT(comments."Comment_Id") = 50 ORDER BY "Comment_Count" DESC;'
+        
             result_df = execute_query(query)
             st.write(result_df)
 
